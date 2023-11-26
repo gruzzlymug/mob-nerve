@@ -10,3 +10,5 @@ Developed with VS Code for convenience. Maybe I have given up on ViM, etc., at l
 
 ## Dependencies
 Requires SDL 2 to be installed in local INCLUDE and LIB directories (e.g. /usr/local/include and /usr/local/lib).
+
+Requires [SDL Image](https://github.com/libsdl-org/SDL_image/releases) as above, version 2.6.3.
