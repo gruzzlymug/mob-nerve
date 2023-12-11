@@ -8,11 +8,14 @@
         "-fcolor-diagnostics",
         "-fansi-escape-codes",
         "-g",
-        "${file}",
+        "-std=c++11",
+        "${fileDirname}/**.cpp",
         "-o",
         "${fileDirname}/${fileBasenameNoExtension}",
         "-lSDL2",
         "-lSDL2_image",
+        "-Wno-c++11-compat-deprecated-writable-strings",
+        "-Wno-writable-strings",
       ],
       "options": {
         "cwd": "${fileDirname}"
