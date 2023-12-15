@@ -1,3 +1,6 @@
 .DS_Store
+*.dSYM/**
 main
-main.dSYM/**
+Graphics
+Thing
+hello.png
