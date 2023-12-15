@@ -40,16 +40,6 @@ matrix33 do_2d() {
     return mvp;
 }
 
-void project() {
-    matrix44 p = PerspectiveMatrix44(45, 800.0f/600.0f, 0.1f, 100.0f);
-
-    matrix44 pp = IdentityMatrix44();
-    pp[2][3] = 1.0f;
-    pp[3][3] = 0.0f;
-    vector4 v = pp * vector4(2, 0, 2, 1);
-    vector4 v2 = pp * vector4(20, 0, 20, 1);
-}
-
 SDL_Rect project_rect(SDL_Rect rect, float z, matrix44& mvp) {
     vector4 v1 = mvp * vector4(rect.x, rect.y, z, 1);
     vector4 v2 = mvp * vector4(rect.x + rect.w, rect.y, z, 1);
@@ -69,12 +59,60 @@ SDL_Rect project_rect(SDL_Rect rect, float z, matrix44& mvp) {
     rect.h = v3[1] - v1[1];
     return rect;
 }
+// TODO figure out: matrix44 p = PerspectiveMatrix44(45, 800.0f/600.0f, 0.1f, 100.0f);
+void do_projection_test(SDL_Renderer* renderer) {
+    matrix44 pp = IdentityMatrix44();
+    pp[2][3] = 1.0f;
+    pp[3][3] = 0.0f;
+    int radius = 20;
+    SDL_Rect rect = {SCREEN_WIDTH/2 - radius, SCREEN_HEIGHT/2 - radius, radius * 2, radius * 2};
+
+    SDL_SetRenderDrawColor(renderer, 0x66, 0xBB, 0x33, 0xFF);
+    // SDL_RenderDrawRect(renderer, &rect);
+    for (int i = 0; i < 8; ++i) {
+        SDL_SetRenderDrawColor(renderer, 0x11 * i, 0xCC, 0x33, 0xFF);
+        SDL_Rect new_rect = project_rect(rect, i, pp);
+        SDL_RenderDrawRect(renderer, &new_rect);
+    }
+
+    SDL_Rect rect2 = {SCREEN_WIDTH/2 - 3*radius, SCREEN_HEIGHT/2 + radius, radius * 2, radius * 2};
+    for (int i = 0; i < 8; ++i) {
+        SDL_SetRenderDrawColor(renderer, 0xCC, 0x00, 0x18 * i, 0xFF);
+        SDL_Rect new_rect = project_rect(rect2, i, pp);
+        SDL_RenderDrawRect(renderer, &new_rect);
+    }
+}
 
 void draw_bezier(SDL_Renderer* renderer, vector2& a, vector2& b, vector2& c, float t) {
     vector2 ab = a + (b-a)*t;
     vector2 bc = b + (c-b)*t;
     vector2 abc = ab + (bc-ab)*t;
     SDL_RenderDrawLine(renderer, abc[0], abc[1], abc[0], abc[1]);
+}
+
+void do_quadrant_vision(std::vector<std::unique_ptr<Thing> >& gods, std::vector<std::unique_ptr<Thing> >& monsters) {
+    vector4 pos = gods[0]->position();
+    vector4 heading = gods[0]->heading();
+    vector4 right = gods[0]->right();
+    for (auto it = monsters.begin(); it != monsters.end(); ++it) {
+        vector4 mpos = (*it)->position();
+        vector4 dir = (mpos - pos); //.normalize();
+        float dot_h = DotProduct(dir, heading);
+        float dot_r = DotProduct(dir, right);
+        if (dot_h > 0) {
+            // in front
+            if (dot_r > 0)
+                (*it)->set_side(0);
+            else if (dot_r < 0)
+                (*it)->set_side(1);
+        } else {
+            // behind
+            if (dot_r > 0)
+                (*it)->set_side(3);
+            else if (dot_r < 0)
+                (*it)->set_side(2);
+        }
+    }
 }
 
 int main() {
@@ -128,8 +166,6 @@ int main() {
     int running = 1;
 
     while (running) {
-        SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
-
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
                 running = 0;
@@ -147,6 +183,7 @@ int main() {
                     break;
 
                 case SDLK_DOWN:
+                    // TODO rehouse this
                     SDL_RenderClear(renderer);
                     SDL_RenderCopy(renderer, helloTexture, NULL, NULL);
                     SDL_RenderPresent(renderer);
@@ -170,51 +207,12 @@ int main() {
             }
         }
 
-        vector4 pos = gods[0]->position();
-        vector4 heading = gods[0]->heading();
-        vector4 right = gods[0]->right();
-        for (auto it = monsters.begin(); it != monsters.end(); ++it) {
-            vector4 mpos = (*it)->position();
-            vector4 dir = (mpos - pos); //.normalize();
-            float dot_h = DotProduct(dir, heading);
-            float dot_r = DotProduct(dir, right);
-            if (dot_h > 0) {
-                // in front
-                if (dot_r > 0)
-                    (*it)->set_side(0);
-                else if (dot_r < 0)
-                    (*it)->set_side(1);
-            } else {
-                // behind
-                if (dot_r > 0)
-                    (*it)->set_side(3);
-                else if (dot_r < 0)
-                    (*it)->set_side(2);
-            }
-        }
+        do_quadrant_vision(gods, monsters);
 
+        SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
         SDL_RenderClear(renderer);
 
-        matrix44 pp = IdentityMatrix44();
-        pp[2][3] = 1.0f;
-        pp[3][3] = 0.0f;
-        int radius = 20;
-        SDL_Rect rect = {SCREEN_WIDTH/2 - radius, SCREEN_HEIGHT/2 - radius, radius * 2, radius * 2};
-
-        SDL_SetRenderDrawColor(renderer, 0x66, 0xBB, 0x33, 0xFF);
-        // SDL_RenderDrawRect(renderer, &rect);
-        for (int i = 0; i < 8; ++i) {
-            SDL_SetRenderDrawColor(renderer, 0x11 * i, 0xCC, 0x33, 0xFF);
-            SDL_Rect new_rect = project_rect(rect, i, pp);
-            SDL_RenderDrawRect(renderer, &new_rect);
-        }
-
-        SDL_Rect rect2 = {SCREEN_WIDTH/2 - 3*radius, SCREEN_HEIGHT/2 + radius, radius * 2, radius * 2};
-        for (int i = 0; i < 8; ++i) {
-            SDL_SetRenderDrawColor(renderer, 0xCC, 0x00, 0x18 * i, 0xFF);
-            SDL_Rect new_rect = project_rect(rect2, i, pp);
-            SDL_RenderDrawRect(renderer, &new_rect);
-        }
+        do_projection_test(renderer);
 
         SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
         // draw_circle(va[0], va[1], 5, renderer);
