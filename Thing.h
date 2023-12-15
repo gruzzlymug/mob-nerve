@@ -66,6 +66,7 @@ public:
     }
 
     void draw(vector4& pos, vector4& heading, vector4& right, SDL_Renderer* renderer) {
-        graphics.draw(pos, heading, right, renderer);
+        graphics.draw_circle(renderer, pos[0], pos[1], 10);
+        graphics.draw_heading(renderer, pos, heading, right);
     }
 };

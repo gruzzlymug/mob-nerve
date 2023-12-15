@@ -1,6 +1,18 @@
 #include "Graphics.h"
 
-void Graphics::draw_circle(int center_x, int center_y, int radius, SDL_Renderer* renderer) {
+void Graphics::draw_heading(SDL_Renderer* renderer, vector4& pos, vector4& heading, vector4& right) {
+    float x = pos[0];
+    float y = pos[1];
+    float hx = heading[0];
+    float hy = heading[1];
+    float rhx = right[0];
+    float rhy = right[1];
+
+    SDL_RenderDrawLine(renderer, x, y, x+10*hx, y+10*hy);
+    SDL_RenderDrawLine(renderer, x, y, x+5*rhx, y+5*rhy);
+}
+
+void Graphics::draw_circle(SDL_Renderer* renderer, int center_x, int center_y, int radius) {
     int x = radius - 1;
     int y = 0;
     int tx = 1;
