@@ -40,12 +40,4 @@ public:
     void rotate(float deg) {
         location = location * RotateRadMatrix44('z', deg*3.14159/180.0f);
     }
-
-    // void rotate(float x, float y, float z) {
-    //     location = location * RotationMatrix44(x, y, z);
-    // }
-
-    // void scale(float x, float y, float z) {
-    //     location = location * ScaleMatrix44(x, y, z);
-    // }
 };

@@ -2,20 +2,18 @@
 
 #include "Graphics.h"
 #include "Location.h"
-
 #include "SDL2/SDL.h"
 #include "matlib.h"
 
 class Thing {
 private:
-    // TODO revisit
     static int next_id;
 
     int id;
-    Location location;
-    Graphics graphics;
     int side;
     float visibility;
+    Location location;
+    Graphics graphics;
 
 public:
     Thing()
@@ -24,6 +22,7 @@ public:
     , graphics(id)
     {
         side = 0;
+        visibility = 0;
     }
 
     ~Thing() {
@@ -66,7 +65,7 @@ public:
     }
 
     void draw(vector4& pos, vector4& heading, vector4& right, SDL_Renderer* renderer) {
-        graphics.draw_circle(renderer, pos[0], pos[1], 10);
+        graphics.draw_circle(renderer, pos[0], pos[1], 10 + 5 * visibility);
         graphics.draw_heading(renderer, pos, heading, right);
     }
 };

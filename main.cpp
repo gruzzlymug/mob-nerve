@@ -1,10 +1,7 @@
 #include "Thing.h"
-
+#include "matlib.h"
 #include "SDL2/SDL.h"
 #include "SDL2/SDL_image.h"
-
-#include "matlib.h"
-
 #include <iostream>
 #include <memory>
 #include <vector>
