@@ -15,6 +15,7 @@ private:
     Location location;
     Graphics graphics;
     int side;
+    float visibility;
 
 public:
     Thing()
@@ -54,6 +55,14 @@ public:
 
     int get_side() {
         return side;
+    }
+
+    void set_visibility(float v) {
+        visibility = v;
+    }
+
+    float get_visibility() {
+        return visibility;
     }
 
     void draw(vector4& pos, vector4& heading, vector4& right, SDL_Renderer* renderer) {

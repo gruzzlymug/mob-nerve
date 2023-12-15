@@ -115,6 +115,30 @@ void do_quadrant_vision(std::vector<std::unique_ptr<Thing> >& gods, std::vector<
     }
 }
 
+void do_other_vision(std::vector<std::unique_ptr<Thing> >& gods, std::vector<std::unique_ptr<Thing> >& monsters) {
+    const float v1 = cos(M_PI / 8);
+    const float v2 = cos(M_PI / 4);
+
+    vector4 pos = gods[0]->position();
+    vector4 heading = gods[0]->heading();
+    for (auto it = monsters.begin(); it != monsters.end(); ++it) {
+        vector4 mpos = (*it)->position();
+        vector4 dir = (mpos - pos).normalize();
+        float dot_h = DotProduct(dir, heading);
+        if (dot_h > v1) {
+            // in plain sight
+            (*it)->set_visibility(1);
+        } else if (dot_h > v2) {
+            // in peripheral vision
+            float visibility = 1 - (v1 - dot_h) / (v1 - v2);
+            (*it)->set_visibility(visibility);
+        } else {
+            // out of sight
+            (*it)->set_visibility(0);
+        }
+    }
+}
+
 int main() {
     std::vector<std::unique_ptr<Thing> > gods;
     std::vector<std::unique_ptr<Thing> > monsters;
@@ -208,6 +232,7 @@ int main() {
         }
 
         do_quadrant_vision(gods, monsters);
+        do_other_vision(gods, monsters);
 
         SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
         SDL_RenderClear(renderer);
@@ -231,23 +256,28 @@ int main() {
             (*it)->draw(pos, heading, right, renderer);
         }
         for (auto it = monsters.begin(); it != monsters.end(); ++it) {
-            int side = (*it)->get_side();
-            switch (side) {
-            case 0:
-                SDL_SetRenderDrawColor(renderer, 0xCC, 0xCC, 0x00, 0xFF);
-                break;
-            case 1:
-                SDL_SetRenderDrawColor(renderer, 0x99, 0x99, 0x99, 0xFF);
-                break;
-            case 2:
-                SDL_SetRenderDrawColor(renderer, 0x00, 0xEE, 0xEE, 0xFF);
-                break;
-            case 3:
-                SDL_SetRenderDrawColor(renderer, 0xEE, 0x00, 0xEE, 0xFF);
-                break;
-            default:
-                SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
-                break;
+            if (true) {
+                float visibility = (*it)->get_visibility();
+                SDL_SetRenderDrawColor(renderer, 0xFF * visibility, 0xFF * visibility, 0xFF * visibility, 0xFF);
+            } else {
+                int side = (*it)->get_side();
+                switch (side) {
+                case 0:
+                    SDL_SetRenderDrawColor(renderer, 0xCC, 0xCC, 0x00, 0xFF);
+                    break;
+                case 1:
+                    SDL_SetRenderDrawColor(renderer, 0x99, 0x99, 0x99, 0xFF);
+                    break;
+                case 2:
+                    SDL_SetRenderDrawColor(renderer, 0x00, 0xEE, 0xEE, 0xFF);
+                    break;
+                case 3:
+                    SDL_SetRenderDrawColor(renderer, 0xEE, 0x00, 0xEE, 0xFF);
+                    break;
+                default:
+                    SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
+                    break;
+                }
             }
             vector4 pos = (*it)->position();
             vector4 heading = (*it)->heading();
