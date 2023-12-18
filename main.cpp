@@ -6,7 +6,7 @@
 #include <memory>
 #include <vector>
 
-int SCREEN_WIDTH = 800;
+int SCREEN_WIDTH = 600;
 int SCREEN_HEIGHT = 600;
 
 bool init() {
@@ -19,65 +19,118 @@ bool init() {
     return success;
 }
 
-matrix33 do_2d() {
-    float ux = 1;
-    float un = -1;
-    float xx = 800;
-    float xn = 0;
-    float vx = 1;
-    float vn = -1;
-    float yx = 600;
-    float yn = 0;
+// page 212 FvD
+matrix33 do_alt_2d() {
+    float ux = SCREEN_WIDTH - 1;
+    float un = 0;
+    float xx = 1;
+    float xn = -1;
+    float vx = 0;
+    float vn = SCREEN_HEIGHT - 1;
+    float yx = 1;
+    float yn = -1;
     matrix33 m = TranslateMatrix33(un, vn);
     matrix33 s = ScaleMatrix33((ux-un)/(xx-xn),(vx-vn)/(yx-yn));
     matrix33 t = TranslateMatrix33(-xn, -yn);
 
     matrix33 mvp = m * s * t;
-    //vector3 v = mvp * vector3(400, 300, 1);
+    vector3 v = mvp * vector3(1, 1, 1);
+    vector3 w = mvp * vector3(-1, -1, 1);
+    vector3 z = mvp * vector3(0, 0, 1);
     return mvp;
 }
 
-SDL_Rect project_rect(SDL_Rect rect, float z, matrix44& mvp) {
-    vector4 v1 = mvp * vector4(rect.x, rect.y, z, 1);
-    vector4 v2 = mvp * vector4(rect.x + rect.w, rect.y, z, 1);
-    vector4 v3 = mvp * vector4(rect.x + rect.w, rect.y + rect.h, z, 1);
-    vector4 v4 = mvp * vector4(rect.x, rect.y + rect.h, z, 1);
-    v1 = mvp * v1;
-    v1 = v1 / v1[3];
-    v2 = mvp * v2;
-    v2 = v2 / v2[3];
-    v3 = mvp * v3;
-    v3 = v3 / v3[3];
-    v4 = mvp * v4;
-    v4 = v4 / v4[3];
-    rect.x = v1[0];
-    rect.y = v1[1];
-    rect.w = v2[0] - v1[0];
-    rect.h = v3[1] - v1[1];
-    return rect;
+void rotate_points(std::vector<vector4>& points, float deg) {
+    matrix44 m = RotateRadMatrix44('y', deg * M_PI / 180.0f);
+    for (auto it = points.begin(); it != points.end(); ++it) {
+        (*it) = m * (*it);
+    }
 }
+
+void project_points(std::vector<vector4>& points, matrix44& mvp) {
+    for (auto it = points.begin(); it != points.end(); ++it) {
+        vector4 v = mvp * (*it);
+        v = v / v[3];
+        (*it) = v;
+    }
+}
+
+std::vector<vector3> view_points(std::vector<vector4>& points, matrix33& w2vp) {
+    std::vector<vector3> new_points;
+
+    for (auto it = points.begin(); it != points.end(); ++it) {
+        vector3 p = vector3((*it)[0], (*it)[1], (*it)[2]);
+        new_points.push_back(w2vp * p);
+    }
+
+    return new_points;
+}
+
+void book() {
+    // view plane
+    vector4 vrp(0, 0, 0, 1);    // view reference point
+    vector4 vpn(0, 0, 1, 0);    // view plane normal
+    // window on view plane
+    float u_min = -50;
+    float u_max = 50;
+    float v_min = -50;
+    float v_max = 50;
+
+    // Viewing Reference Coordinate System
+    vector4 vrc_origin = vrp;
+    vector3 v_up(0, 1, 0);
+    vector3 n_axis;
+    n_axis[0] = vpn[0];
+    n_axis[1] = vpn[1];
+    n_axis[2] = vpn[2];
+    vector3 u_axis = CrossProduct(v_up, n_axis);
+    // projection
+    vector4 prp(0, 0, 1, 1);    // projection reference point
+}
+
+std::vector<vector4> make_cube() {
+    std::vector<vector4> points;
+    points.push_back(vector4(-1, 1, 1, 1));
+    points.push_back(vector4(1, 1, 1, 1));
+    points.push_back(vector4(1, -1, 1, 1));
+    points.push_back(vector4(-1, -1, 1, 1));
+
+    points.push_back(vector4(-1, 1, -1, 1));
+    points.push_back(vector4(1, 1, -1, 1));
+    points.push_back(vector4(1, -1, -1, 1));
+    points.push_back(vector4(-1, -1, -1, 1));
+
+    return points;
+}
+
+void draw_cube(std::vector<vector3>& points, SDL_Renderer* renderer) {
+    SDL_RenderDrawLine(renderer, points[0][0], points[0][1], points[1][0], points[1][1]);
+    SDL_RenderDrawLine(renderer, points[1][0], points[1][1], points[2][0], points[2][1]);
+    SDL_RenderDrawLine(renderer, points[2][0], points[2][1], points[3][0], points[3][1]);
+    SDL_RenderDrawLine(renderer, points[3][0], points[3][1], points[0][0], points[0][1]);
+
+    SDL_RenderDrawLine(renderer, points[4][0], points[4][1], points[5][0], points[5][1]);
+    SDL_RenderDrawLine(renderer, points[5][0], points[5][1], points[6][0], points[6][1]);
+    SDL_RenderDrawLine(renderer, points[6][0], points[6][1], points[7][0], points[7][1]);
+    SDL_RenderDrawLine(renderer, points[7][0], points[7][1], points[4][0], points[4][1]);
+
+    SDL_RenderDrawLine(renderer, points[0][0], points[0][1], points[4][0], points[4][1]);
+    SDL_RenderDrawLine(renderer, points[1][0], points[1][1], points[5][0], points[5][1]);
+    SDL_RenderDrawLine(renderer, points[2][0], points[2][1], points[6][0], points[6][1]);
+    SDL_RenderDrawLine(renderer, points[3][0], points[3][1], points[7][0], points[7][1]);
+}
+
 // TODO figure out: matrix44 p = PerspectiveMatrix44(45, 800.0f/600.0f, 0.1f, 100.0f);
-void do_projection_test(SDL_Renderer* renderer) {
+std::vector<vector3> project_into_view_plane(SDL_Renderer* renderer, std::vector<vector4>& points) {
     matrix44 pp = IdentityMatrix44();
     pp[2][3] = 1.0f;
     pp[3][3] = 0.0f;
-    int radius = 20;
-    SDL_Rect rect = {SCREEN_WIDTH/2 - radius, SCREEN_HEIGHT/2 - radius, radius * 2, radius * 2};
+    project_points(points, pp);
 
-    SDL_SetRenderDrawColor(renderer, 0x66, 0xBB, 0x33, 0xFF);
-    // SDL_RenderDrawRect(renderer, &rect);
-    for (int i = 0; i < 8; ++i) {
-        SDL_SetRenderDrawColor(renderer, 0x11 * i, 0xCC, 0x33, 0xFF);
-        SDL_Rect new_rect = project_rect(rect, i, pp);
-        SDL_RenderDrawRect(renderer, &new_rect);
-    }
+    matrix33 w2vp = do_alt_2d();
+    std::vector<vector3> vp = view_points(points, w2vp);
 
-    SDL_Rect rect2 = {SCREEN_WIDTH/2 - 3*radius, SCREEN_HEIGHT/2 + radius, radius * 2, radius * 2};
-    for (int i = 0; i < 8; ++i) {
-        SDL_SetRenderDrawColor(renderer, 0xCC, 0x00, 0x18 * i, 0xFF);
-        SDL_Rect new_rect = project_rect(rect2, i, pp);
-        SDL_RenderDrawRect(renderer, &new_rect);
-    }
+    return vp;
 }
 
 void draw_bezier(SDL_Renderer* renderer, vector2& a, vector2& b, vector2& c, float t) {
@@ -158,8 +211,6 @@ int main() {
     vector2 vc(300, 100);
     float t = 0;
 
-    matrix33 m33 = do_2d();
-
     bool initOk = init();
     if (!initOk) {
         exit(-1);
@@ -234,14 +285,59 @@ int main() {
         SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
         SDL_RenderClear(renderer);
 
-        do_projection_test(renderer);
+        //
+        static float rot_angle = 0.0f;
+
+        {
+            std::vector<vector4> points = make_cube();
+
+            rotate_points(points, rot_angle);
+            rot_angle += 0.1f;
+            rot_angle = fmod(rot_angle, 360.0f);
+
+            matrix44 tm = TranslateMatrix44(0, 0.9, 0);
+            for (auto it = points.begin(); it != points.end(); ++it) {
+                (*it) = tm * (*it);
+            }
+
+            float z = 3 + 0 * 3.5f;
+            for (auto it = points.begin(); it != points.end(); ++it) {
+                (*it)[2] += z;
+            }
+
+            std::vector<vector3> vp = project_into_view_plane(renderer, points);
+            SDL_SetRenderDrawColor(renderer, 0xCC, 0x00, 0x10, 0xFF);
+            draw_cube(vp, renderer);
+        }
+
+        {
+            std::vector<vector4> points = make_cube();
+
+            rotate_points(points, rot_angle);
+            rot_angle += 0.1f;
+            rot_angle = fmod(rot_angle, 360.0f);
+
+            matrix44 tm = TranslateMatrix44(0, 3.2, 0);
+            for (auto it = points.begin(); it != points.end(); ++it) {
+                (*it) = tm * (*it);
+            }
+
+            float z = 3 + 0 * 3.5f;
+            for (auto it = points.begin(); it != points.end(); ++it) {
+                (*it)[2] += z;
+            }
+
+            std::vector<vector3> vp = project_into_view_plane(renderer, points);
+            SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
+            draw_cube(vp, renderer);
+        }
 
         SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
         // draw_circle(va[0], va[1], 5, renderer);
         // draw_circle(vb[0], vb[1], 5, renderer);
         // draw_circle(vc[0], vc[1], 5, renderer);
         for (float t = 0; t< 1.0; t += 0.01) {
-            draw_bezier(renderer, va, vb, vc, t);
+            // draw_bezier(renderer, va, vb, vc, t);
         }
 
         for (auto it = gods.begin(); it != gods.end(); ++it) {
