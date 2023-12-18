@@ -279,14 +279,9 @@ int main() {
                 (*it) = m * (*it);
             }
 
-            matrix44 tm = TranslateMatrix44(0, 0.9, 0);
+            matrix44 tm = TranslateMatrix44(0, 0.9, 3);
             for (auto it = points.begin(); it != points.end(); ++it) {
                 (*it) = tm * (*it);
-            }
-
-            float z = 3 + 0 * 3.5f;
-            for (auto it = points.begin(); it != points.end(); ++it) {
-                (*it)[2] += z;
             }
 
             std::vector<vector3> vp = project_into_screen_space(renderer, points);
@@ -302,14 +297,9 @@ int main() {
                 (*it) = m * (*it);
             }
 
-            matrix44 tm = TranslateMatrix44(0, 3.2, 0);
+            matrix44 tm = TranslateMatrix44(0, 3.2, 3);
             for (auto it = points.begin(); it != points.end(); ++it) {
                 (*it) = tm * (*it);
-            }
-
-            float z = 3 + 0 * 3.5f;
-            for (auto it = points.begin(); it != points.end(); ++it) {
-                (*it)[2] += z;
             }
 
             std::vector<vector3> vp = project_into_screen_space(renderer, points);
