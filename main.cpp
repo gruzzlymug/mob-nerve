@@ -34,36 +34,7 @@ matrix33 do_alt_2d() {
     matrix33 t = TranslateMatrix33(-xn, -yn);
 
     matrix33 mvp = m * s * t;
-    vector3 v = mvp * vector3(1, 1, 1);
-    vector3 w = mvp * vector3(-1, -1, 1);
-    vector3 z = mvp * vector3(0, 0, 1);
     return mvp;
-}
-
-void rotate_points(std::vector<vector4>& points, float deg) {
-    matrix44 m = RotateRadMatrix44('y', deg * M_PI / 180.0f);
-    for (auto it = points.begin(); it != points.end(); ++it) {
-        (*it) = m * (*it);
-    }
-}
-
-void project_points(std::vector<vector4>& points, matrix44& mvp) {
-    for (auto it = points.begin(); it != points.end(); ++it) {
-        vector4 v = mvp * (*it);
-        v = v / v[3];
-        (*it) = v;
-    }
-}
-
-std::vector<vector3> view_points(std::vector<vector4>& points, matrix33& w2vp) {
-    std::vector<vector3> new_points;
-
-    for (auto it = points.begin(); it != points.end(); ++it) {
-        vector3 p = vector3((*it)[0], (*it)[1], (*it)[2]);
-        new_points.push_back(w2vp * p);
-    }
-
-    return new_points;
 }
 
 void book() {
@@ -121,16 +92,26 @@ void draw_cube(std::vector<vector3>& points, SDL_Renderer* renderer) {
 }
 
 // TODO figure out: matrix44 p = PerspectiveMatrix44(45, 800.0f/600.0f, 0.1f, 100.0f);
-std::vector<vector3> project_into_view_plane(SDL_Renderer* renderer, std::vector<vector4>& points) {
+std::vector<vector3> project_into_screen_space(SDL_Renderer* renderer, std::vector<vector4>& points) {
+    // project into view plane
     matrix44 pp = IdentityMatrix44();
     pp[2][3] = 1.0f;
     pp[3][3] = 0.0f;
-    project_points(points, pp);
+    for (auto it = points.begin(); it != points.end(); ++it) {
+        vector4 v = pp * (*it);
+        v = v / v[3];
+        (*it) = v;
+    }
 
+    // move into screen space
     matrix33 w2vp = do_alt_2d();
-    std::vector<vector3> vp = view_points(points, w2vp);
+    std::vector<vector3> view_points;
+    for (auto it = points.begin(); it != points.end(); ++it) {
+        vector3 p = vector3((*it)[0], (*it)[1], (*it)[2]);
+        view_points.push_back(w2vp * p);
+    }
 
-    return vp;
+    return view_points;
 }
 
 void draw_bezier(SDL_Renderer* renderer, vector2& a, vector2& b, vector2& c, float t) {
@@ -285,15 +266,18 @@ int main() {
         SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
         SDL_RenderClear(renderer);
 
-        //
         static float rot_angle = 0.0f;
+
+        rot_angle += 0.1f;
+        rot_angle = fmod(rot_angle, 360.0f);
 
         {
             std::vector<vector4> points = make_cube();
 
-            rotate_points(points, rot_angle);
-            rot_angle += 0.1f;
-            rot_angle = fmod(rot_angle, 360.0f);
+            matrix44 m = RotateRadMatrix44('y', rot_angle * M_PI / 180.0f);
+            for (auto it = points.begin(); it != points.end(); ++it) {
+                (*it) = m * (*it);
+            }
 
             matrix44 tm = TranslateMatrix44(0, 0.9, 0);
             for (auto it = points.begin(); it != points.end(); ++it) {
@@ -305,7 +289,7 @@ int main() {
                 (*it)[2] += z;
             }
 
-            std::vector<vector3> vp = project_into_view_plane(renderer, points);
+            std::vector<vector3> vp = project_into_screen_space(renderer, points);
             SDL_SetRenderDrawColor(renderer, 0xCC, 0x00, 0x10, 0xFF);
             draw_cube(vp, renderer);
         }
@@ -313,9 +297,10 @@ int main() {
         {
             std::vector<vector4> points = make_cube();
 
-            rotate_points(points, rot_angle);
-            rot_angle += 0.1f;
-            rot_angle = fmod(rot_angle, 360.0f);
+            matrix44 m = RotateRadMatrix44('y', rot_angle * M_PI / 180.0f);
+            for (auto it = points.begin(); it != points.end(); ++it) {
+                (*it) = m * (*it);
+            }
 
             matrix44 tm = TranslateMatrix44(0, 3.2, 0);
             for (auto it = points.begin(); it != points.end(); ++it) {
@@ -327,7 +312,7 @@ int main() {
                 (*it)[2] += z;
             }
 
-            std::vector<vector3> vp = project_into_view_plane(renderer, points);
+            std::vector<vector3> vp = project_into_screen_space(renderer, points);
             SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
             draw_cube(vp, renderer);
         }
