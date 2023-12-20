@@ -92,7 +92,7 @@ void draw_cube(std::vector<vector3>& points, SDL_Renderer* renderer) {
 }
 
 // TODO figure out: matrix44 p = PerspectiveMatrix44(45, 800.0f/600.0f, 0.1f, 100.0f);
-std::vector<vector3> project_into_screen_space(SDL_Renderer* renderer, std::vector<vector4>& points) {
+std::vector<vector3> project_into_screen_space(std::vector<vector4>& points) {
     // project into view plane
     matrix44 pp = IdentityMatrix44();
     pp[2][3] = 1.0f;
@@ -284,7 +284,7 @@ int main() {
                 (*it) = tm * (*it);
             }
 
-            std::vector<vector3> vp = project_into_screen_space(renderer, points);
+            std::vector<vector3> vp = project_into_screen_space(points);
             SDL_SetRenderDrawColor(renderer, 0xCC, 0x00, 0x10, 0xFF);
             draw_cube(vp, renderer);
         }
@@ -302,7 +302,7 @@ int main() {
                 (*it) = tm * (*it);
             }
 
-            std::vector<vector3> vp = project_into_screen_space(renderer, points);
+            std::vector<vector3> vp = project_into_screen_space(points);
             SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
             draw_cube(vp, renderer);
         }
