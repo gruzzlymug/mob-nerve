@@ -1,6 +1,8 @@
 .DS_Store
 *.dSYM/**
 main
+matlib
+AssetMgr
 Graphics
 Thing
 hello.png

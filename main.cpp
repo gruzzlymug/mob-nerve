@@ -1,3 +1,4 @@
+#include "AssetMgr.h"
 #include "Thing.h"
 #include "matlib.h"
 #include "SDL2/SDL.h"
@@ -171,6 +172,9 @@ void do_other_vision(std::vector<std::unique_ptr<Thing> >& gods, std::vector<std
 }
 
 int main() {
+    AssetMgr assetMgr;
+    assetMgr.loadObj("assets/cube.obj");
+
     std::vector<std::unique_ptr<Thing> > gods;
     std::vector<std::unique_ptr<Thing> > monsters;
 
