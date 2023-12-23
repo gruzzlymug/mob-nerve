@@ -4,5 +4,6 @@ main
 matlib
 AssetMgr
 Graphics
+Mesh
 Thing
 hello.png

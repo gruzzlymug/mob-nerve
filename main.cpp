@@ -1,4 +1,5 @@
 #include "AssetMgr.h"
+#include "Mesh.h"
 #include "Thing.h"
 #include "matlib.h"
 #include "SDL2/SDL.h"
@@ -58,21 +59,6 @@ void book() {
     vector3 u_axis = CrossProduct(v_up, n_axis);
     // projection
     vector4 prp(0, 0, 1, 1);    // projection reference point
-}
-
-std::vector<vector4> make_cube() {
-    std::vector<vector4> points;
-    points.push_back(vector4(-1, 1, 1, 1));
-    points.push_back(vector4(1, 1, 1, 1));
-    points.push_back(vector4(1, -1, 1, 1));
-    points.push_back(vector4(-1, -1, 1, 1));
-
-    points.push_back(vector4(-1, 1, -1, 1));
-    points.push_back(vector4(1, 1, -1, 1));
-    points.push_back(vector4(1, -1, -1, 1));
-    points.push_back(vector4(-1, -1, -1, 1));
-
-    return points;
 }
 
 void draw_cube(std::vector<vector3>& points, SDL_Renderer* renderer) {
@@ -173,7 +159,7 @@ void do_other_vision(std::vector<std::unique_ptr<Thing> >& gods, std::vector<std
 
 int main() {
     AssetMgr assetMgr;
-    assetMgr.loadObj("assets/cube.obj");
+    Mesh cube = assetMgr.loadObj("assets/cube.obj");
 
     std::vector<std::unique_ptr<Thing> > gods;
     std::vector<std::unique_ptr<Thing> > monsters;
@@ -275,38 +261,31 @@ int main() {
         rot_angle += 0.1f;
         rot_angle = fmod(rot_angle, 360.0f);
 
+        const std::vector<vector4>& verts = cube.getVertices();
         {
-            std::vector<vector4> points = make_cube();
+            std::vector<vector4> transformed(verts.size());
 
-            matrix44 m = RotateRadMatrix44('y', rot_angle * M_PI / 180.0f);
-            for (auto it = points.begin(); it != points.end(); ++it) {
-                (*it) = m * (*it);
-            }
+            matrix44 matTranslate = TranslateMatrix44(0, 0.9, 3);
+            matrix44 matRotate = RotateRadMatrix44('y', rot_angle * M_PI / 180.0f);
+            std::transform(verts.begin(), verts.end(), transformed.begin(), [&matRotate, &matTranslate](const vector4& vertex) {
+                return matTranslate * matRotate * vertex;
+            });
 
-            matrix44 tm = TranslateMatrix44(0, 0.9, 3);
-            for (auto it = points.begin(); it != points.end(); ++it) {
-                (*it) = tm * (*it);
-            }
-
-            std::vector<vector3> vp = project_into_screen_space(points);
+            std::vector<vector3> vp = project_into_screen_space(transformed);
             SDL_SetRenderDrawColor(renderer, 0xCC, 0x00, 0x10, 0xFF);
             draw_cube(vp, renderer);
         }
 
         {
-            std::vector<vector4> points = make_cube();
+            std::vector<vector4> transformed(verts.size());
 
-            matrix44 m = RotateRadMatrix44('y', rot_angle * M_PI / 180.0f);
-            for (auto it = points.begin(); it != points.end(); ++it) {
-                (*it) = m * (*it);
-            }
+            matrix44 matRotate = RotateRadMatrix44('y', rot_angle * M_PI / 180.0f);
+            matrix44 matTranslate = TranslateMatrix44(0, 3.2, 3);
+            std::transform(verts.begin(), verts.end(), transformed.begin(), [&matRotate, &matTranslate](const vector4& vertex) {
+                return matTranslate * matRotate * vertex;
+            });
 
-            matrix44 tm = TranslateMatrix44(0, 3.2, 3);
-            for (auto it = points.begin(); it != points.end(); ++it) {
-                (*it) = tm * (*it);
-            }
-
-            std::vector<vector3> vp = project_into_screen_space(points);
+            std::vector<vector3> vp = project_into_screen_space(transformed);
             SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
             draw_cube(vp, renderer);
         }
