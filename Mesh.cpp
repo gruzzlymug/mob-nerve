@@ -17,3 +17,11 @@ const std::vector<vector4>& Mesh::getVertices() const {
 const std::vector<Triangle>& Mesh::getTriangles() const {
     return triangles;
 }
+
+const std::vector<vector4> Mesh::getTransformedVertices(const matrix44& transform) const {
+    std::vector<vector4> transformed(vertices.size());
+    std::transform(vertices.begin(), vertices.end(), transformed.begin(), [&transform](const vector4& vertex) {
+        return transform * vertex;
+    });
+    return transformed;
+}

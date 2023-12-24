@@ -21,4 +21,6 @@ public:
 
     const std::vector<vector4>& getVertices() const;
     const std::vector<Triangle>& getTriangles() const;
+
+    const std::vector<vector4> getTransformedVertices(const matrix44& transform) const;
 };

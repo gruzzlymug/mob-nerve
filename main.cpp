@@ -61,7 +61,7 @@ void book() {
     vector4 prp(0, 0, 1, 1);    // projection reference point
 }
 
-void draw_cube(std::vector<vector3>& points, SDL_Renderer* renderer) {
+void draw_cube(std::vector<vector2>& points, SDL_Renderer* renderer) {
     SDL_RenderDrawLine(renderer, points[0][0], points[0][1], points[1][0], points[1][1]);
     SDL_RenderDrawLine(renderer, points[1][0], points[1][1], points[2][0], points[2][1]);
     SDL_RenderDrawLine(renderer, points[2][0], points[2][1], points[3][0], points[3][1]);
@@ -79,7 +79,7 @@ void draw_cube(std::vector<vector3>& points, SDL_Renderer* renderer) {
 }
 
 // TODO figure out: matrix44 p = PerspectiveMatrix44(45, 800.0f/600.0f, 0.1f, 100.0f);
-std::vector<vector3> project_into_screen_space(std::vector<vector4>& points) {
+std::vector<vector2> project_into_screen_space(std::vector<vector4>& points) {
     // project into view plane
     matrix44 pp = IdentityMatrix44();
     pp[2][3] = 1.0f;
@@ -92,10 +92,13 @@ std::vector<vector3> project_into_screen_space(std::vector<vector4>& points) {
 
     // move into screen space
     matrix33 w2vp = do_alt_2d();
-    std::vector<vector3> view_points;
+    std::vector<vector2> view_points;
+    vector3 p = vector3(0, 0, 1);
     for (auto it = points.begin(); it != points.end(); ++it) {
-        vector3 p = vector3((*it)[0], (*it)[1], (*it)[2]);
-        view_points.push_back(w2vp * p);
+        p.x = (*it)[0];
+        p.y = (*it)[1];
+        p = w2vp * p;
+        view_points.push_back(vector2(p.x, p.y));
     }
 
     return view_points;
@@ -261,31 +264,23 @@ int main() {
         rot_angle += 0.1f;
         rot_angle = fmod(rot_angle, 360.0f);
 
-        const std::vector<vector4>& verts = cube.getVertices();
         {
-            std::vector<vector4> transformed(verts.size());
-
             matrix44 matTranslate = TranslateMatrix44(0, 0.9, 3);
             matrix44 matRotate = RotateRadMatrix44('y', rot_angle * M_PI / 180.0f);
-            std::transform(verts.begin(), verts.end(), transformed.begin(), [&matRotate, &matTranslate](const vector4& vertex) {
-                return matTranslate * matRotate * vertex;
-            });
-
-            std::vector<vector3> vp = project_into_screen_space(transformed);
+            matrix44 matTransform = matTranslate * matRotate;
+            std::vector<vector4> transformed = cube.getTransformedVertices(matTransform);
+            // TODO use vector4 instead of vector3
+            std::vector<vector2> vp = project_into_screen_space(transformed);
             SDL_SetRenderDrawColor(renderer, 0xCC, 0x00, 0x10, 0xFF);
             draw_cube(vp, renderer);
         }
 
         {
-            std::vector<vector4> transformed(verts.size());
-
             matrix44 matRotate = RotateRadMatrix44('y', rot_angle * M_PI / 180.0f);
             matrix44 matTranslate = TranslateMatrix44(0, 3.2, 3);
-            std::transform(verts.begin(), verts.end(), transformed.begin(), [&matRotate, &matTranslate](const vector4& vertex) {
-                return matTranslate * matRotate * vertex;
-            });
-
-            std::vector<vector3> vp = project_into_screen_space(transformed);
+            matrix44 matTransform = matTranslate * matRotate;
+            std::vector<vector4> transformed = cube.getTransformedVertices(matTransform);
+            std::vector<vector2> vp = project_into_screen_space(transformed);
             SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
             draw_cube(vp, renderer);
         }
