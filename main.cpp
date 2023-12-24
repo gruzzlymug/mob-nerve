@@ -259,21 +259,33 @@ int main() {
         {
             matrix44 matTranslate = TranslateMatrix44(0, 0.9, 3);
             matrix44 matRotate = RotateRadMatrix44('y', rot_angle * M_PI / 180.0f);
-            matrix44 matTransform = matTranslate * matRotate;
-            std::vector<vector4> transformed = cube.getTransformedVertices(matTransform);
-            std::vector<vector2> vp = project_into_screen_space(transformed);
+            matrix44 transform = matTranslate * matRotate;
+            std::vector<vector4> transformed = cube.get_transformed_vertices(transform);
+            std::vector<vector2> ssv = project_into_screen_space(transformed);
+            std::vector<vector4> normals = cube.get_transformed_vertex_normals(transform);
+
+            vector4 camera{0, 0, 0, 1};
+            vector4 vpn{0, 0, 1, 0};
+            std::vector<Triangle> triangles = cube.get_triangles();
+            triangles.erase(std::remove_if(triangles.begin(), triangles.end(), [&camera, &normals, &transformed](const Triangle& t) {
+                vector4 from_camera = (transformed[t.v1] - camera).normalize();
+                float dot = DotProduct(from_camera, normals[t.vn1]);
+                return dot > 0;
+            }), triangles.end());
+
             SDL_SetRenderDrawColor(renderer, 0xCC, 0x00, 0x10, 0xFF);
-            draw_triangles(renderer, vp, cube.getTriangles());
+            draw_triangles(renderer, ssv, triangles);
         }
 
-        {
+        if (false) {
             matrix44 matRotate = RotateRadMatrix44('y', rot_angle * M_PI / 180.0f);
             matrix44 matTranslate = TranslateMatrix44(0, 3.2, 3);
-            matrix44 matTransform = matTranslate * matRotate;
-            std::vector<vector4> transformed = cube.getTransformedVertices(matTransform);
-            std::vector<vector2> vp = project_into_screen_space(transformed);
+            matrix44 transform = matTranslate * matRotate;
+            std::vector<vector4> transformed = cube.get_transformed_vertices(transform);
+            std::vector<vector2> ssv = project_into_screen_space(transformed);
+            std::vector<vector4> normals = cube.get_transformed_vertex_normals(transform);
             SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
-            draw_triangles(renderer, vp, cube.getTriangles());
+            draw_triangles(renderer, ssv, cube.get_triangles());
         }
 
         SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
