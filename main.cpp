@@ -61,21 +61,13 @@ void book() {
     vector4 prp(0, 0, 1, 1);    // projection reference point
 }
 
-void draw_cube(std::vector<vector2>& points, SDL_Renderer* renderer) {
-    SDL_RenderDrawLine(renderer, points[0][0], points[0][1], points[1][0], points[1][1]);
-    SDL_RenderDrawLine(renderer, points[1][0], points[1][1], points[2][0], points[2][1]);
-    SDL_RenderDrawLine(renderer, points[2][0], points[2][1], points[3][0], points[3][1]);
-    SDL_RenderDrawLine(renderer, points[3][0], points[3][1], points[0][0], points[0][1]);
-
-    SDL_RenderDrawLine(renderer, points[4][0], points[4][1], points[5][0], points[5][1]);
-    SDL_RenderDrawLine(renderer, points[5][0], points[5][1], points[6][0], points[6][1]);
-    SDL_RenderDrawLine(renderer, points[6][0], points[6][1], points[7][0], points[7][1]);
-    SDL_RenderDrawLine(renderer, points[7][0], points[7][1], points[4][0], points[4][1]);
-
-    SDL_RenderDrawLine(renderer, points[0][0], points[0][1], points[4][0], points[4][1]);
-    SDL_RenderDrawLine(renderer, points[1][0], points[1][1], points[5][0], points[5][1]);
-    SDL_RenderDrawLine(renderer, points[2][0], points[2][1], points[6][0], points[6][1]);
-    SDL_RenderDrawLine(renderer, points[3][0], points[3][1], points[7][0], points[7][1]);
+void draw_triangles(SDL_Renderer* renderer, std::vector<vector2>& points, const std::vector<Triangle>& triangles) {
+    for (auto it = triangles.begin(); it != triangles.end(); ++it) {
+        Triangle t = *it;
+        SDL_RenderDrawLine(renderer, points[t.v1][0], points[t.v1][1], points[t.v2][0], points[t.v2][1]);
+        SDL_RenderDrawLine(renderer, points[t.v2][0], points[t.v2][1], points[t.v3][0], points[t.v3][1]);
+        SDL_RenderDrawLine(renderer, points[t.v3][0], points[t.v3][1], points[t.v1][0], points[t.v1][1]);
+    }
 }
 
 // TODO figure out: matrix44 p = PerspectiveMatrix44(45, 800.0f/600.0f, 0.1f, 100.0f);
@@ -269,10 +261,9 @@ int main() {
             matrix44 matRotate = RotateRadMatrix44('y', rot_angle * M_PI / 180.0f);
             matrix44 matTransform = matTranslate * matRotate;
             std::vector<vector4> transformed = cube.getTransformedVertices(matTransform);
-            // TODO use vector4 instead of vector3
             std::vector<vector2> vp = project_into_screen_space(transformed);
             SDL_SetRenderDrawColor(renderer, 0xCC, 0x00, 0x10, 0xFF);
-            draw_cube(vp, renderer);
+            draw_triangles(renderer, vp, cube.getTriangles());
         }
 
         {
@@ -282,7 +273,7 @@ int main() {
             std::vector<vector4> transformed = cube.getTransformedVertices(matTransform);
             std::vector<vector2> vp = project_into_screen_space(transformed);
             SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
-            draw_cube(vp, renderer);
+            draw_triangles(renderer, vp, cube.getTriangles());
         }
 
         SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
