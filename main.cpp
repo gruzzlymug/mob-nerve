@@ -154,7 +154,7 @@ void do_other_vision(std::vector<std::unique_ptr<Thing> >& gods, std::vector<std
 
 int main() {
     AssetMgr assetMgr;
-    Mesh cube = assetMgr.loadObj("assets/cube.obj");
+    Mesh cube = assetMgr.loadObj("assets/sphere.obj");
 
     std::vector<std::unique_ptr<Thing> > gods;
     std::vector<std::unique_ptr<Thing> > monsters;
@@ -213,7 +213,8 @@ int main() {
                 {
                 case SDLK_UP:
                     for (auto it = gods.begin(); it != gods.end(); ++it) {
-                        (*it)->move(3, 0, 0);
+                        vector4 heading = (*it)->heading();
+                        (*it)->move(3*heading.x, 3*heading.y, 3*heading.z);
                     }
                     for (auto it = monsters.begin(); it != monsters.end(); ++it) {
                         (*it)->move(2, 0, 0);
@@ -229,13 +230,13 @@ int main() {
 
                 case SDLK_RIGHT:
                     for (auto it = gods.begin(); it != gods.end(); ++it) {
-                        (*it)->rotate(10);
+                        (*it)->rotate('z', 10);
                     }
                     break;
 
                 case SDLK_LEFT:
                     for (auto it = gods.begin(); it != gods.end(); ++it) {
-                        (*it)->rotate(-10);
+                        (*it)->rotate('z', -10);
                     }
                     break;
 

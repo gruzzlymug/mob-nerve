@@ -3,6 +3,7 @@
         "iosfwd": "cpp",
         "vector": "cpp",
         "istream": "cpp",
-        "string": "cpp"
+        "string": "cpp",
+        "__bit_reference": "cpp"
     }
 }

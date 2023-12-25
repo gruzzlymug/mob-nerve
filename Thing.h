@@ -29,23 +29,40 @@ public:
     }
 
     vector4 position() {
-        return location.position();
+        return location.get_position();
     }
 
     vector4 heading() {
-        return location.heading();
+        matrix44 transform = location.get_transform();
+        return transform[0];
     }
 
     vector4 right() {
-        return location.right();
+        matrix44 transform = location.get_transform();
+        return transform[1];
     }
 
     void move(float x, float y, float z) {
-        location.move(x, y, z);
+        vector4 position = location.get_position();
+        location.set_position(position.x + x, position.y + y, position.z + z);
     }
 
-    void rotate(float deg) {
-        location.rotate(deg);
+    void rotate(char axis, float deg) {
+        float cur_deg = 0;
+        switch (axis) {
+            case 'x':
+                cur_deg = location.get_pitch();
+                location.set_pitch(cur_deg + deg);
+                break;
+            case 'y':
+                cur_deg = location.get_yaw();
+                location.set_yaw(cur_deg + deg);
+                break;
+            case 'z':
+                cur_deg = location.get_roll();
+                location.set_roll(cur_deg + deg);
+                break;
+        }
     }
 
     void set_side(int s) {
