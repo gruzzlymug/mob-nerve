@@ -154,7 +154,7 @@ void do_other_vision(std::vector<std::unique_ptr<Thing> >& gods, std::vector<std
 
 int main() {
     AssetMgr assetMgr;
-    Mesh cube = assetMgr.loadObj("assets/sphere.obj");
+    Mesh cube = assetMgr.loadObj("assets/torus.obj");
 
     std::vector<std::unique_ptr<Thing> > gods;
     std::vector<std::unique_ptr<Thing> > monsters;
@@ -254,7 +254,7 @@ int main() {
 
         static float rot_angle = 0.0f;
 
-        rot_angle += 0.1f;
+        rot_angle += 0.05f;
         rot_angle = fmod(rot_angle, 360.0f);
 
         {
@@ -276,6 +276,22 @@ int main() {
 
             SDL_SetRenderDrawColor(renderer, 0xCC, 0x00, 0x10, 0xFF);
             draw_triangles(renderer, ssv, triangles);
+            //
+            std::vector<vector4> tnv;
+            float scale = 0.025;
+            for (auto it = triangles.begin(); it != triangles.end(); ++it) {
+                tnv.push_back(transformed[it->v1]);
+                tnv.push_back(transformed[it->v1] + normals[it->vn1] * scale);
+                tnv.push_back(transformed[it->v2]);
+                tnv.push_back(transformed[it->v2] + normals[it->vn2] * scale);
+                tnv.push_back(transformed[it->v3]);
+                tnv.push_back(transformed[it->v3] + normals[it->vn3] * scale);
+            }
+            std::vector<vector2> ssn = project_into_screen_space(tnv);
+            SDL_SetRenderDrawColor(renderer, 0xCC, 0xCC, 0xCC, 0xFF);
+            for (int i = 0; i < ssn.size(); i += 2) {
+                SDL_RenderDrawLine(renderer, ssn[i][0], ssn[i][1], ssn[i+1][0], ssn[i+1][1]);
+            }
         }
 
         if (false) {
