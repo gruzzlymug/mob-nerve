@@ -28,11 +28,11 @@ public:
     Location& operator=(const Location& other) = delete;
 
     float get_yaw() {
-        return yaw;
+        return yaw * 180.0f / M_PI;
     }
 
     void set_yaw(float deg) {
-        yaw = deg;
+        yaw = deg * M_PI / 180.0f;
     }
 
     float get_pitch() {
@@ -44,11 +44,11 @@ public:
     }
 
     float get_roll() {
-        return roll;
+        return roll * 180.0f / M_PI;
     }
 
     void set_roll(float deg) {
-        roll = deg;
+        roll = deg * M_PI / 180.0f;
     }
 
     vector4 get_position() {
@@ -64,8 +64,8 @@ public:
 
     const matrix44 get_transform() const {
         matrix44 translate = TranslateMatrix44(position.x, position.y, position.z);
-        matrix44 yawMat = RotateRadMatrix44('y', yaw * M_PI / 180.0f);
-        matrix44 rollMat = RotateRadMatrix44('z', roll * M_PI / 180.0f);
+        matrix44 yawMat = RotateRadMatrix44('y', yaw);
+        matrix44 rollMat = RotateRadMatrix44('z', roll);
         matrix44 transform = translate * yawMat * rollMat;
         // transform = matlib::rotate(transform, pitch, vector4{1.0f, 0.0f, 0.0f, 0.0f});
         return transform;
