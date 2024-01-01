@@ -8,8 +8,8 @@
 #include <memory>
 #include <vector>
 
-#define INDEX_FORWARD(Index) \
-    Index = (Index + 1) % verts.size();
+// #define INDEX_FORWARD(Index) \
+//     Index = (Index + 1) % verts.size();
 #define INDEX_BACKWARD(Index) \
     Index = (Index - 1 + verts.size()) % verts.size();
 #define INDEX_MOVE(Index,Direction) \
@@ -102,14 +102,8 @@ void ScanEdge(int X1, int Y1, int X2, int Y2, int SetXStart,
         // store the x coordinate in the appropriate edge list
         if (SetXStart == 1)
             WorkingEdgePointPtr->XStart = X1 + (int)(ceil((Y-Y1) * InverseSlope));
-        else {
+        else
             WorkingEdgePointPtr->XEnd = X1 + (int)(ceil((Y-Y1) * InverseSlope));
-            int qqq = WorkingEdgePointPtr->XEnd;
-            if (qqq < 0)
-                qqq = qqq;
-            if (qqq > 700)
-                qqq = qqq;
-        }
     }
     // advance caller's pointer
     *EdgePointPtr = WorkingEdgePointPtr;
@@ -118,42 +112,33 @@ void ScanEdge(int X1, int Y1, int X2, int Y2, int SetXStart,
 void DrawHorizontalLineList(SDL_Renderer* renderer, struct HLineList *HLineListPtr,
       int Color)
 {
-    struct HLine *HLinePtr;
-    int Y;
-
     // point to the XStart/XEnd descriptor for the first (top)
     // horizontal line
-    HLinePtr = HLineListPtr->HLinePtr;
+    struct HLine *HLinePtr = HLineListPtr->HLinePtr;
     // draw each horizontal line in turn, starting with the top one and
     // advancing one line each time
-    for (Y = HLineListPtr->YStart; Y < (HLineListPtr->YStart +
+    for (int Y = HLineListPtr->YStart; Y < (HLineListPtr->YStart +
           HLineListPtr->Length); Y++, HLinePtr++) {
         // draw each pixel in the current horizontal line in turn,
         // starting with the leftmost one
         SDL_RenderDrawLine(renderer, HLinePtr->XStart, Y, HLinePtr->XEnd, Y);
-        int qqq = HLinePtr->XEnd;
-        if (qqq < 0)
-            qqq = qqq;
-        if (qqq > 700)
-            qqq = qqq;
     }
 }
 
 int fill_polygon(SDL_Renderer* renderer, std::vector<vector2>& verts, int Color, int XOffset, int YOffset) {
-    int i, MinIndexL, MaxIndex, MinIndexR, SkipFirst, Temp;
+    int MinIndexL, MaxIndex, MinIndexR, SkipFirst;
     int MinPoint_Y, MaxPoint_Y, TopIsFlat, LeftEdgeDir;
-    int NextIndex, CurrentIndex, PreviousIndex;
+    int CurrentIndex, PreviousIndex;
     int DeltaXN, DeltaYN, DeltaXP, DeltaYP;
     struct HLineList WorkingLineList;
     struct HLine *EdgePointPtr;
-    vector2 Vertex;
 
     if (verts.size() == 0) {
         return 1;
     }
-    vector2 vertex = verts[0];
+
     MaxPoint_Y = MinPoint_Y = verts[MinIndexL = MaxIndex = 0].y;
-    for (i = 1; i < verts.size(); i++) {
+    for (int i = 1; i < verts.size(); i++) {
         if (verts[i].y < MinPoint_Y)
             MinPoint_Y = verts[MinIndexL = i].y;    // new top
         else if (verts[i].y > MaxPoint_Y)
@@ -164,24 +149,30 @@ int fill_polygon(SDL_Renderer* renderer, std::vector<vector2>& verts, int Color,
     // scan in ascending order to find last top edge point
     MinIndexR = MinIndexL;
     while (verts[MinIndexR].y == MinPoint_Y)
-        INDEX_FORWARD(MinIndexR);
+        MinIndexR = (MinIndexR + 1) % verts.size();
     INDEX_BACKWARD(MinIndexR);      // back up to last top edge point
+    // now scan in descending order to find first top edge point
+    while (verts[MinIndexL].y == MinPoint_Y)
+        INDEX_BACKWARD(MinIndexL);
+    // back up to first top edge point
+    MinIndexL = (MinIndexL + 1) % verts.size();
     // ?? figure out which direction through the verts from the top;
     // vertex is the left edge and which is the right
     LeftEdgeDir = -1;   // assume left edge runs down thru verts
-    if ((TopIsFlat = (verts[MinIndexL].x !=
-          verts[MinIndexR].x) ? 1 : 0) == 1) {
+    TopIsFlat = (verts[MinIndexL].x != verts[MinIndexR].x) ? 1 : 0;
+    if (TopIsFlat == 1) {
         // if the top is flat, just see which of the ends is leftmost
         if (verts[MinIndexL].x > verts[MinIndexR].x) {
             LeftEdgeDir = 1;        // TODO fill in comments
-            Temp = MinIndexL;       //
+            int Temp = MinIndexL;       //
             MinIndexL = MinIndexR;  //
             MinIndexR = Temp;       // etc
         }
     } else {
         // point to the downward end of the first line ...
-        NextIndex = MinIndexR;
-        INDEX_FORWARD(NextIndex);
+        int NextIndex = MinIndexR;
+        NextIndex = (NextIndex + 1) % verts.size();
+
         PreviousIndex = MinIndexL;
         INDEX_BACKWARD(PreviousIndex);
         // calculate X and Y lengths from the top vertex to the end of
@@ -193,7 +184,7 @@ int fill_polygon(SDL_Renderer* renderer, std::vector<vector2>& verts, int Color,
         DeltaYP = verts[PreviousIndex].y - verts[MinIndexL].y;
         if (((long)DeltaXN * DeltaYP - (long)DeltaYN * DeltaXP) < 0L) {
             LeftEdgeDir = 1;        // TODO ...
-            Temp = MinIndexL;
+            int Temp = MinIndexL;
             MinIndexL = MinIndexR;
             MinIndexR = Temp;
         }
@@ -204,8 +195,8 @@ int fill_polygon(SDL_Renderer* renderer, std::vector<vector2>& verts, int Color,
     // in ...
     // the ...
     // the ...
-    if ((WorkingLineList.Length =
-         MaxPoint_Y - MinPoint_Y - 1 + TopIsFlat) <= 0)
+    WorkingLineList.Length = MaxPoint_Y - MinPoint_Y - 1 + TopIsFlat;
+    if (WorkingLineList.Length <= 0)
         return 1;
     WorkingLineList.YStart = YOffset + MinPoint_Y + 1 - TopIsFlat;
     // get memory
@@ -224,7 +215,10 @@ int fill_polygon(SDL_Renderer* renderer, std::vector<vector2>& verts, int Color,
     SkipFirst = TopIsFlat ? 0 : 1;
     // scan convert each line in the left edge from top to bottom
     do {
-        INDEX_MOVE(CurrentIndex, LeftEdgeDir);
+        if (LeftEdgeDir > 0)
+            CurrentIndex = (CurrentIndex + 1) % verts.size();
+        else
+            CurrentIndex = (CurrentIndex - 1 + verts.size()) % verts.size();
         ScanEdge(verts[PreviousIndex].x + XOffset,
             verts[PreviousIndex].y,
             verts[CurrentIndex].x + XOffset,
@@ -232,6 +226,7 @@ int fill_polygon(SDL_Renderer* renderer, std::vector<vector2>& verts, int Color,
         PreviousIndex = CurrentIndex;
         SkipFirst = 0;      // scan convert the first point from now on
     } while (CurrentIndex != MaxIndex);
+
     // scan the right edge and store the boundary points in the list
     EdgePointPtr = WorkingLineList.HLinePtr;
     PreviousIndex = CurrentIndex = MinIndexR;
@@ -252,14 +247,14 @@ int fill_polygon(SDL_Renderer* renderer, std::vector<vector2>& verts, int Color,
     // draw the line list representing the scan converted polygon
     DrawHorizontalLineList(renderer, &WorkingLineList, Color);
 
-    // release the line list's mmemory
+    // release the line list's memory
     free(WorkingLineList.HLinePtr);
     return 0;
 }
 
 void draw_triangles(SDL_Renderer* renderer, std::vector<vector2>& points, const std::vector<Triangle>& triangles) {
-    for (auto it = triangles.begin(); it != triangles.end(); it++) {
-        Triangle t = *it;
+    for (int i =  0; i < triangles.size(); i++) {
+        const Triangle& t = triangles[i];
 
         bool fill_polys = true;
         if (fill_polys) {
@@ -273,7 +268,7 @@ void draw_triangles(SDL_Renderer* renderer, std::vector<vector2>& points, const 
 
         bool draw_outlines = true;
         if (draw_outlines) {
-            SDL_SetRenderDrawColor(renderer, 0x33, 0x33, 0xCC, 0xFF);
+            SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xCC, 0xFF);
             SDL_RenderDrawLine(renderer, points[t.v1][0], points[t.v1][1], points[t.v2][0], points[t.v2][1]);
             SDL_RenderDrawLine(renderer, points[t.v2][0], points[t.v2][1], points[t.v3][0], points[t.v3][1]);
             SDL_RenderDrawLine(renderer, points[t.v3][0], points[t.v3][1], points[t.v1][0], points[t.v1][1]);
@@ -367,7 +362,7 @@ int main() {
     int frame_no = 0;
 
     AssetMgr assetMgr;
-    Mesh cube = assetMgr.loadObj("assets/cube.obj");
+    Mesh cube = assetMgr.loadObj("assets/sphere.obj");
 
     std::vector<std::unique_ptr<Thing>> gods;
     std::vector<std::unique_ptr<Thing>> monsters;
@@ -469,7 +464,7 @@ int main() {
 
         static float rot_angle = 0.0f;
 
-        rot_angle += 0.05f;
+        rot_angle += 0.5f;
         rot_angle = fmod(rot_angle, 360.0f);
 
         {
@@ -493,7 +488,7 @@ int main() {
             draw_triangles(renderer, ssv, triangles);
 
             // NORMALS
-            bool draw_normals = false;
+            bool draw_normals = true;
             if (draw_normals) {
                 std::vector<vector4> tnv;
                 float scale = 0.025;
@@ -506,7 +501,7 @@ int main() {
                     tnv.push_back(transformed[it->v3] + normals[it->vn3] * scale);
                 }
                 std::vector<vector2> ssn = project_into_screen_space(tnv);
-                SDL_SetRenderDrawColor(renderer, 0xCC, 0xCC, 0xCC, 0xFF);
+                SDL_SetRenderDrawColor(renderer, 0xFF, 0x99, 0xFF, 0xFF);
                 for (int i = 0; i < ssn.size(); i += 2) {
                     SDL_RenderDrawLine(renderer, ssn[i][0], ssn[i][1], ssn[i+1][0], ssn[i+1][1]);
                 }
@@ -571,7 +566,8 @@ int main() {
         }
         SDL_RenderPresent(renderer);
 
-        //SDL_Delay(32);
+        // 60 fps the crummy way
+        SDL_Delay(16);
     }
 
     SDL_DestroyTexture(helloTexture);
