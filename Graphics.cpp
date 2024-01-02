@@ -1,5 +1,7 @@
 #include "Graphics.h"
 
+#include "SDL2/SDL.h"
+
 void Graphics::draw_heading(SDL_Renderer* renderer, vector4& pos, vector4& heading, vector4& right) {
     float x = pos[0];
     float y = pos[1];

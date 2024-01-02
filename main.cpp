@@ -310,11 +310,11 @@ void draw_bezier(SDL_Renderer* renderer, vector2& a, vector2& b, vector2& c, flo
 }
 
 void do_quadrant_vision(std::vector<std::unique_ptr<Thing> >& gods, std::vector<std::unique_ptr<Thing> >& monsters) {
-    vector4 pos = gods[0]->position();
+    vector4 pos = gods[0]->get_location().get_position();
     vector4 heading = gods[0]->heading();
     vector4 right = gods[0]->right();
     for (auto it = monsters.begin(); it != monsters.end(); it++) {
-        vector4 mpos = (*it)->position();
+        vector4 mpos = (*it)->get_location().get_position();
         vector4 dir = (mpos - pos); //.normalize();
         float dot_h = DotProduct(dir, heading);
         float dot_r = DotProduct(dir, right);
@@ -338,10 +338,10 @@ void do_other_vision(std::vector<std::unique_ptr<Thing> >& gods, std::vector<std
     const float v1 = cos(M_PI / 8);
     const float v2 = cos(M_PI / 4);
 
-    vector4 pos = gods[0]->position();
+    vector4 pos = gods[0]->get_location().get_position();
     vector4 heading = gods[0]->heading();
     for (auto it = monsters.begin(); it != monsters.end(); it++) {
-        vector4 mpos = (*it)->position();
+        vector4 mpos = (*it)->get_location().get_position();
         vector4 dir = (mpos - pos).normalize();
         float dot_h = DotProduct(dir, heading);
         if (dot_h > v1) {
@@ -362,7 +362,9 @@ int main() {
     int frame_no = 0;
 
     AssetMgr assetMgr;
-    Mesh cube = assetMgr.loadObj("assets/sphere.obj");
+    Mesh cube = assetMgr.loadObj("assets/cube.obj");
+    Mesh ico1 = assetMgr.loadObj("assets/ico1.obj");
+    Mesh ico4 = assetMgr.loadObj("assets/ico4.obj");
 
     std::vector<std::unique_ptr<Thing>> gods;
     std::vector<std::unique_ptr<Thing>> monsters;
@@ -379,6 +381,20 @@ int main() {
     monsters[1]->move(SCREEN_WIDTH/3, 2*SCREEN_HEIGHT/3, 0);
     monsters[2]->move(SCREEN_WIDTH/5, SCREEN_HEIGHT/5, 0);
     monsters[3]->move(SCREEN_WIDTH/6, 2*SCREEN_HEIGHT/5, 0);
+
+    std::vector<std::unique_ptr<Thing>> objects;
+    objects.push_back(std::unique_ptr<Thing>(new Thing()));
+    objects.push_back(std::unique_ptr<Thing>(new Thing()));
+    objects.push_back(std::unique_ptr<Thing>(new Thing()));
+    std::shared_ptr<Mesh> ico4_ptr = std::make_shared<Mesh>(ico4);
+    std::shared_ptr<Mesh> ico1_ptr = std::make_shared<Mesh>(ico1);
+    std::shared_ptr<Mesh> cube_ptr = std::make_shared<Mesh>(cube);
+    objects[0]->move(0, -3.1, 29);
+    objects[0]->get_graphics().set_mesh(cube_ptr);
+    objects[1]->move(0, -3.1, 12);
+    objects[1]->get_graphics().set_mesh(ico1_ptr);
+    objects[2]->move(0, -3.1, 6);
+    objects[2]->get_graphics().set_mesh(ico4_ptr);
 
     vector2 va(100, 100);
     vector2 vb(200, 200);
@@ -462,61 +478,53 @@ int main() {
         SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
         SDL_RenderClear(renderer);
 
-        static float rot_angle = 0.0f;
-
-        rot_angle += 0.5f;
-        rot_angle = fmod(rot_angle, 360.0f);
-
         {
-            matrix44 matTranslate = TranslateMatrix44(0, -0.1, 3);
-            matrix44 matRotate = RotateRadMatrix44('y', rot_angle * M_PI / 180.0f);
-            matrix44 transform = matTranslate * matRotate;
-            std::vector<vector4> transformed = cube.get_transformed_vertices(transform);
-            std::vector<vector2> ssv = project_into_screen_space(transformed);
-            std::vector<vector4> normals = cube.get_transformed_vertex_normals(transform);
+            // do stuff
+            objects[0]->rotate('y', 0.5f);
+            objects[1]->rotate('y', -0.7f);
+            objects[2]->rotate('z', -0.45f);
 
+            // vector4 vpn{0, 0, 1, 0};
             vector4 camera{0, 0, 0, 1};
-            vector4 vpn{0, 0, 1, 0};
-            std::vector<Triangle> triangles = cube.get_triangles();
-            triangles.erase(std::remove_if(triangles.begin(), triangles.end(), [&camera, &normals, &transformed](const Triangle& t) {
-                vector4 from_camera = (transformed[t.v1] - camera).normalize();
-                float dot = DotProduct(from_camera, normals[t.vn1]);
-                return dot > 0;
-            }), triangles.end());
-
-            SDL_SetRenderDrawColor(renderer, 0xCC, 0x00, 0x10, 0xFF);
-            draw_triangles(renderer, ssv, triangles);
-
-            // NORMALS
-            bool draw_normals = true;
-            if (draw_normals) {
-                std::vector<vector4> tnv;
-                float scale = 0.025;
-                for (auto it = triangles.begin(); it != triangles.end(); it++) {
-                    tnv.push_back(transformed[it->v1]);
-                    tnv.push_back(transformed[it->v1] + normals[it->vn1] * scale);
-                    tnv.push_back(transformed[it->v2]);
-                    tnv.push_back(transformed[it->v2] + normals[it->vn2] * scale);
-                    tnv.push_back(transformed[it->v3]);
-                    tnv.push_back(transformed[it->v3] + normals[it->vn3] * scale);
+            for (auto it = objects.begin(); it != objects.end(); it++) {
+                // THING STATE
+                std::shared_ptr<Mesh> mesh = (*it)->get_graphics().get_mesh();
+                if (mesh == nullptr) {
+                    continue;
                 }
-                std::vector<vector2> ssn = project_into_screen_space(tnv);
-                SDL_SetRenderDrawColor(renderer, 0xFF, 0x99, 0xFF, 0xFF);
-                for (int i = 0; i < ssn.size(); i += 2) {
-                    SDL_RenderDrawLine(renderer, ssn[i][0], ssn[i][1], ssn[i+1][0], ssn[i+1][1]);
+                matrix44 transform = (*it)->get_location().get_transform();
+                std::vector<vector4> transformed = mesh->get_transformed_vertices(transform);
+                std::vector<vector4> normals = mesh->get_transformed_vertex_normals(transform);
+                std::vector<Triangle> triangles = mesh->get_triangles();
+                // MESH
+                std::vector<vector2> ssv = project_into_screen_space(transformed);
+                triangles.erase(std::remove_if(triangles.begin(), triangles.end(), [&camera, &normals, &transformed](const Triangle& t) {
+                    vector4 from_camera = (transformed[t.v1] - camera).normalize();
+                    float dot = DotProduct(from_camera, normals[t.vn1]);
+                    return dot > 0;
+                }), triangles.end());
+                SDL_SetRenderDrawColor(renderer, 0xCC, 0x00, 0x10, 0xFF);
+                draw_triangles(renderer, ssv, triangles);
+                // NORMALS
+                bool draw_normals = true;
+                if (draw_normals) {
+                    std::vector<vector4> tnv;
+                    float scale = 0.025;
+                    for (auto it = triangles.begin(); it != triangles.end(); it++) {
+                        tnv.push_back(transformed[it->v1]);
+                        tnv.push_back(transformed[it->v1] + normals[it->vn1] * scale);
+                        tnv.push_back(transformed[it->v2]);
+                        tnv.push_back(transformed[it->v2] + normals[it->vn2] * scale);
+                        tnv.push_back(transformed[it->v3]);
+                        tnv.push_back(transformed[it->v3] + normals[it->vn3] * scale);
+                    }
+                    std::vector<vector2> ssn = project_into_screen_space(tnv);
+                    SDL_SetRenderDrawColor(renderer, 0xFF, 0x99, 0xFF, 0xFF);
+                    for (int i = 0; i < ssn.size(); i += 2) {
+                        SDL_RenderDrawLine(renderer, ssn[i][0], ssn[i][1], ssn[i+1][0], ssn[i+1][1]);
+                    }
                 }
             }
-        }
-
-        if (false) {
-            matrix44 matRotate = RotateRadMatrix44('y', rot_angle * M_PI / 180.0f);
-            matrix44 matTranslate = TranslateMatrix44(0, 3.2, 3);
-            matrix44 transform = matTranslate * matRotate;
-            std::vector<vector4> transformed = cube.get_transformed_vertices(transform);
-            std::vector<vector2> ssv = project_into_screen_space(transformed);
-            std::vector<vector4> normals = cube.get_transformed_vertex_normals(transform);
-            SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
-            draw_triangles(renderer, ssv, cube.get_triangles());
         }
 
         SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
@@ -530,7 +538,7 @@ int main() {
         for (auto it = gods.begin(); it != gods.end(); it++) {
             // TODO only expect one god! (for now...)
             SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
-            vector4 pos = (*it)->position();
+            vector4 pos = (*it)->get_location().get_position();
             vector4 heading = (*it)->heading();
             vector4 right = (*it)->right();
             (*it)->draw(pos, heading, right, renderer);
@@ -559,7 +567,7 @@ int main() {
                     break;
                 }
             }
-            vector4 pos = (*it)->position();
+            vector4 pos = (*it)->get_location().get_position();
             vector4 heading = (*it)->heading();
             vector4 right = (*it)->right();
             (*it)->draw(pos, heading, right, renderer);

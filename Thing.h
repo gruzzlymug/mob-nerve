@@ -28,8 +28,12 @@ public:
     ~Thing() {
     }
 
-    vector4 position() {
-        return location.get_position();
+    Location& get_location() {
+        return location;
+    }
+
+    Graphics& get_graphics() {
+        return graphics;
     }
 
     vector4 heading() {
