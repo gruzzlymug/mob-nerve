@@ -382,19 +382,17 @@ int main() {
     monsters[2]->move(SCREEN_WIDTH/5, SCREEN_HEIGHT/5, 0);
     monsters[3]->move(SCREEN_WIDTH/6, 2*SCREEN_HEIGHT/5, 0);
 
-    std::vector<std::unique_ptr<Thing>> objects;
-    objects.push_back(std::unique_ptr<Thing>(new Thing()));
-    objects.push_back(std::unique_ptr<Thing>(new Thing()));
-    objects.push_back(std::unique_ptr<Thing>(new Thing()));
     std::shared_ptr<Mesh> ico4_ptr = std::make_shared<Mesh>(ico4);
     std::shared_ptr<Mesh> ico1_ptr = std::make_shared<Mesh>(ico1);
     std::shared_ptr<Mesh> cube_ptr = std::make_shared<Mesh>(cube);
-    objects[0]->move(0, -3.1, 29);
-    objects[0]->get_graphics().set_mesh(cube_ptr);
-    objects[1]->move(0, -3.1, 12);
-    objects[1]->get_graphics().set_mesh(ico1_ptr);
-    objects[2]->move(0, -3.1, 6);
-    objects[2]->get_graphics().set_mesh(ico4_ptr);
+
+    std::vector<std::unique_ptr<Thing>> objects;
+    for (int i = 4; i >= 0; i--) {
+        objects.push_back(std::unique_ptr<Thing>(new Thing()));
+        objects[4-i]->get_location().set_scale(0.2f);
+        objects[4-i]->move(0, -2, 3 + i * 2.5);
+        objects[4-i]->get_graphics().set_mesh(ico1_ptr);
+    }
 
     vector2 va(100, 100);
     vector2 vb(200, 200);
@@ -479,11 +477,9 @@ int main() {
         SDL_RenderClear(renderer);
 
         {
-            // do stuff
-            objects[0]->rotate('y', 0.5f);
-            objects[1]->rotate('y', -0.7f);
-            objects[2]->rotate('z', -0.45f);
-
+            for (int i = 0; i < objects.size(); i++) {
+                objects[i]->rotate('y', 0.5);
+            }
             // vector4 vpn{0, 0, 1, 0};
             vector4 camera{0, 0, 0, 1};
             for (auto it = objects.begin(); it != objects.end(); it++) {

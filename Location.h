@@ -7,6 +7,7 @@ class Location {
 private:
     // TODO investigate alignment
     int entity_id;
+    float scale;
     float yaw;
     float pitch;
     float roll;
@@ -15,6 +16,7 @@ private:
 public:
     explicit Location(int entity_id) {
         this->entity_id = entity_id;
+        scale = 1.0f;
         yaw = 0.0f;
         pitch = 0.0f;
         roll = 0.0f;
@@ -26,6 +28,10 @@ public:
 
     Location(const Location& other) = delete;
     Location& operator=(const Location& other) = delete;
+
+    void set_scale(float scale) {
+        this->scale = scale;
+    }
 
     float get_yaw() {
         return yaw * 180.0f / M_PI;
@@ -65,9 +71,10 @@ public:
     const matrix44 get_transform() const {
         matrix44 translate = TranslateMatrix44(position.x, position.y, position.z);
         matrix44 yawMat = RotateRadMatrix44('y', yaw);
+        matrix44 pitchMat = RotateRadMatrix44('x', pitch);
         matrix44 rollMat = RotateRadMatrix44('z', roll);
-        matrix44 transform = translate * yawMat * rollMat;
-        // transform = matlib::rotate(transform, pitch, vector4{1.0f, 0.0f, 0.0f, 0.0f});
+        matrix44 scaleMat = ScaleMatrix44(scale, scale, scale);
+        matrix44 transform = translate * pitchMat * yawMat * rollMat * scaleMat;
         return transform;
     }
 };
