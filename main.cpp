@@ -252,23 +252,38 @@ int fill_polygon(SDL_Renderer* renderer, std::vector<vector2>& verts, int Color,
     return 0;
 }
 
-void draw_triangles(SDL_Renderer* renderer, std::vector<vector2>& points, const std::vector<Triangle>& triangles) {
+void draw_triangles(SDL_Renderer* renderer, std::vector<vector2>& points, std::vector<vector4>& normals, const std::vector<Triangle>& triangles) {
     for (int i =  0; i < triangles.size(); i++) {
         const Triangle& t = triangles[i];
 
+        // Draw polygons
         bool fill_polys = true;
         if (fill_polys) {
-            SDL_SetRenderDrawColor(renderer, 0x99, 0x99, 0x99, 0xFF);
+            // light the face
+            // light normal is negative to simplify the math
+            vector4 light_dir = vector4{.25, .7, -0.5, 0};
+            light_dir.normalize();
+            // NOTE all triangle normals are the same at the moment
+            vector4& n1 = normals[t.vn1];
+            float light_amt = DotProduct(n1, light_dir);
+            if (light_amt < 0) {
+                light_amt = 0;
+            }
+            float ambient_color = 0.1 * 255;
+            float diffuse_color = (255 - ambient_color) * light_amt;
+            float color = ambient_color + diffuse_color;
+            SDL_SetRenderDrawColor(renderer, color, color, color, 0xFF);
+            // Draw the polygon
             std::vector<vector2> verts;
             verts.push_back(points[t.v1]);
             verts.push_back(points[t.v2]);
             verts.push_back(points[t.v3]);
             fill_polygon(renderer, verts, 0, 0, 0);
         }
-
+        // Draw outlines
         bool draw_outlines = true;
         if (draw_outlines) {
-            SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xCC, 0xFF);
+            SDL_SetRenderDrawColor(renderer, 0x99, 0x99, 0x99, 0xFF);
             SDL_RenderDrawLine(renderer, points[t.v1][0], points[t.v1][1], points[t.v2][0], points[t.v2][1]);
             SDL_RenderDrawLine(renderer, points[t.v2][0], points[t.v2][1], points[t.v3][0], points[t.v3][1]);
             SDL_RenderDrawLine(renderer, points[t.v3][0], points[t.v3][1], points[t.v1][0], points[t.v1][1]);
@@ -277,25 +292,21 @@ void draw_triangles(SDL_Renderer* renderer, std::vector<vector2>& points, const 
 }
 
 // TODO figure out: matrix44 p = PerspectiveMatrix44(45, 800.0f/600.0f, 0.1f, 100.0f);
-std::vector<vector2> project_into_screen_space(std::vector<vector4>& points) {
+std::vector<vector2> project_into_screen_space(std::vector<vector4>& points, matrix44& projection, matrix33& view) {
     // project into view plane
-    matrix44 pp = IdentityMatrix44();
-    pp[2][3] = 1.0f;
-    pp[3][3] = 0.0f;
     for (auto it = points.begin(); it != points.end(); it++) {
-        vector4 v = pp * (*it);
+        vector4 v = projection * (*it);
         v = v / v[3];
         (*it) = v;
     }
 
     // move into screen space
-    matrix33 w2vp = do_alt_2d();
     std::vector<vector2> view_points;
     vector3 p = vector3(0, 0, 1);
     for (auto it = points.begin(); it != points.end(); it++) {
         p.x = (*it)[0];
         p.y = (*it)[1];
-        p = w2vp * p;
+        p = view * p;
         view_points.push_back(vector2((int)p.x, (int)p.y));
     }
 
@@ -366,6 +377,12 @@ int main() {
     Mesh ico1 = assetMgr.loadObj("assets/ico1.obj");
     Mesh ico4 = assetMgr.loadObj("assets/ico4.obj");
 
+    matrix44 projMat = IdentityMatrix44();
+    projMat[2][3] = 1.0f;
+    projMat[3][3] = 0.0f;
+
+    matrix33 viewMat = do_alt_2d();
+
     std::vector<std::unique_ptr<Thing>> gods;
     std::vector<std::unique_ptr<Thing>> monsters;
 
@@ -387,11 +404,12 @@ int main() {
     std::shared_ptr<Mesh> cube_ptr = std::make_shared<Mesh>(cube);
 
     std::vector<std::unique_ptr<Thing>> objects;
-    for (int i = 4; i >= 0; i--) {
+    int num_objects = 3;
+    for (int i = num_objects - 1; i >= 0; i--) {
         objects.push_back(std::unique_ptr<Thing>(new Thing()));
-        objects[4-i]->get_location().set_scale(0.2f);
-        objects[4-i]->move(0, -2, 3 + i * 2.5);
-        objects[4-i]->get_graphics().set_mesh(ico1_ptr);
+        objects[num_objects-1-i]->get_location().set_scale(0.75f);
+        objects[num_objects-1-i]->move(3 * i, -2, 4 + i * 4);
+        objects[num_objects-1-i]->get_graphics().set_mesh(ico1_ptr);
     }
 
     vector2 va(100, 100);
@@ -493,14 +511,14 @@ int main() {
                 std::vector<vector4> normals = mesh->get_transformed_vertex_normals(transform);
                 std::vector<Triangle> triangles = mesh->get_triangles();
                 // MESH
-                std::vector<vector2> ssv = project_into_screen_space(transformed);
+                std::vector<vector2> ssv = project_into_screen_space(transformed, projMat, viewMat);
                 triangles.erase(std::remove_if(triangles.begin(), triangles.end(), [&camera, &normals, &transformed](const Triangle& t) {
                     vector4 from_camera = (transformed[t.v1] - camera).normalize();
                     float dot = DotProduct(from_camera, normals[t.vn1]);
                     return dot > 0;
                 }), triangles.end());
                 SDL_SetRenderDrawColor(renderer, 0xCC, 0x00, 0x10, 0xFF);
-                draw_triangles(renderer, ssv, triangles);
+                draw_triangles(renderer, ssv, normals, triangles);
                 // NORMALS
                 bool draw_normals = true;
                 if (draw_normals) {
@@ -514,7 +532,7 @@ int main() {
                         tnv.push_back(transformed[it->v3]);
                         tnv.push_back(transformed[it->v3] + normals[it->vn3] * scale);
                     }
-                    std::vector<vector2> ssn = project_into_screen_space(tnv);
+                    std::vector<vector2> ssn = project_into_screen_space(tnv, projMat, viewMat);
                     SDL_SetRenderDrawColor(renderer, 0xFF, 0x99, 0xFF, 0xFF);
                     for (int i = 0; i < ssn.size(); i += 2) {
                         SDL_RenderDrawLine(renderer, ssn[i][0], ssn[i][1], ssn[i+1][0], ssn[i+1][1]);
