@@ -125,7 +125,7 @@ void DrawHorizontalLineList(SDL_Renderer* renderer, struct HLineList *HLineListP
     }
 }
 
-int fill_polygon(SDL_Renderer* renderer, std::vector<vector2>& verts, int Color, int XOffset, int YOffset) {
+int fill_polygon(SDL_Renderer* renderer, std::vector<vector3>& verts, int Color, int XOffset, int YOffset) {
     int MinIndexL, MaxIndex, MinIndexR, SkipFirst;
     int MinPoint_Y, MaxPoint_Y, TopIsFlat, LeftEdgeDir;
     int CurrentIndex, PreviousIndex;
@@ -252,7 +252,7 @@ int fill_polygon(SDL_Renderer* renderer, std::vector<vector2>& verts, int Color,
     return 0;
 }
 
-void draw_triangles(SDL_Renderer* renderer, std::vector<vector2>& points, std::vector<vector4>& normals, const std::vector<Triangle>& triangles) {
+void draw_triangles(SDL_Renderer* renderer, std::vector<vector3>& points, std::vector<vector4>& normals, const std::vector<Triangle>& triangles) {
     for (int i =  0; i < triangles.size(); i++) {
         const Triangle& t = triangles[i];
 
@@ -274,7 +274,7 @@ void draw_triangles(SDL_Renderer* renderer, std::vector<vector2>& points, std::v
             float color = ambient_color + diffuse_color;
             SDL_SetRenderDrawColor(renderer, color, color, color, 0xFF);
             // Draw the polygon
-            std::vector<vector2> verts;
+            std::vector<vector3> verts;
             verts.push_back(points[t.v1]);
             verts.push_back(points[t.v2]);
             verts.push_back(points[t.v3]);
@@ -292,7 +292,7 @@ void draw_triangles(SDL_Renderer* renderer, std::vector<vector2>& points, std::v
 }
 
 // TODO figure out: matrix44 p = PerspectiveMatrix44(45, 800.0f/600.0f, 0.1f, 100.0f);
-std::vector<vector2> project_into_screen_space(std::vector<vector4>& points, matrix44& projection, matrix33& view) {
+std::vector<vector3> project_into_screen_space(std::vector<vector4>& points, matrix44& projection, matrix33& view) {
     // project into view plane
     for (auto it = points.begin(); it != points.end(); it++) {
         vector4 v = projection * (*it);
@@ -301,13 +301,13 @@ std::vector<vector2> project_into_screen_space(std::vector<vector4>& points, mat
     }
 
     // move into screen space
-    std::vector<vector2> view_points;
+    std::vector<vector3> view_points;
     vector3 p = vector3(0, 0, 1);
     for (auto it = points.begin(); it != points.end(); it++) {
         p.x = (*it)[0];
         p.y = (*it)[1];
         p = view * p;
-        view_points.push_back(vector2((int)p.x, (int)p.y));
+        view_points.push_back(vector3((int)p.x, (int)p.y, 0));
     }
 
     return view_points;
@@ -511,7 +511,7 @@ int main() {
                 std::vector<vector4> normals = mesh->get_transformed_vertex_normals(transform);
                 std::vector<Triangle> triangles = mesh->get_triangles();
                 // MESH
-                std::vector<vector2> ssv = project_into_screen_space(transformed, projMat, viewMat);
+                std::vector<vector3> ssv = project_into_screen_space(transformed, projMat, viewMat);
                 triangles.erase(std::remove_if(triangles.begin(), triangles.end(), [&camera, &normals, &transformed](const Triangle& t) {
                     vector4 from_camera = (transformed[t.v1] - camera).normalize();
                     float dot = DotProduct(from_camera, normals[t.vn1]);
@@ -532,7 +532,7 @@ int main() {
                         tnv.push_back(transformed[it->v3]);
                         tnv.push_back(transformed[it->v3] + normals[it->vn3] * scale);
                     }
-                    std::vector<vector2> ssn = project_into_screen_space(tnv, projMat, viewMat);
+                    std::vector<vector3> ssn = project_into_screen_space(tnv, projMat, viewMat);
                     SDL_SetRenderDrawColor(renderer, 0xFF, 0x99, 0xFF, 0xFF);
                     for (int i = 0; i < ssn.size(); i += 2) {
                         SDL_RenderDrawLine(renderer, ssn[i][0], ssn[i][1], ssn[i+1][0], ssn[i+1][1]);
